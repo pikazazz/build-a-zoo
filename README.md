@@ -22,7 +22,9 @@ Main/
 │   ├── AutoHatchSystem.lua       # Auto hatch eggs (to be created)
 │   ├── AutoClaimSystem.lua       # Auto claim money (to be created)
 │   └── AutoFeedSystem.lua        # Auto feed pets (to be created)
-├── Main.lua                      # Main application entry point
+├── Main.lua                      # Main application entry point (local)
+├── AllInOne.lua                  # Single-file HTTP-compatible version
+├── HttpMain.lua                  # HTTP module loader (alternative)
 └── README.md                     # This file
 ```
 
@@ -119,11 +121,41 @@ Automated egg buying functionality.
 
 ## 🚀 Getting Started
 
-### Running the New Version
+### Running the Local Version
 ```lua
--- Simply run the Main.lua file
+-- For local development (file system access)
 loadstring(readfile("Main.lua"))()
 ```
+
+### Running the HTTP Version
+```lua
+-- For HTTP execution (GitHub/online)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/AllInOne.lua"))()
+```
+
+### Alternative HTTP Loading
+```lua
+-- HttpMain.lua version (loads modules separately via HTTP)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/HttpMain.lua"))()
+```
+
+## 📁 File Versions
+
+### 1. **Main.lua** - Local Development Version
+- Uses `require(script.Core....)` for module loading
+- Best for local development and testing
+- Requires file system access
+
+### 2. **AllInOne.lua** - HTTP Single-File Version ⭐ **RECOMMENDED**
+- Self-contained single file with all modules
+- Maintains clean modular structure internally
+- Perfect for HTTP execution
+- No external dependencies
+
+### 3. **HttpMain.lua** - HTTP Module Loader Version
+- Loads individual modules via HTTP
+- More similar to local structure
+- Requires all module files to be accessible via HTTP
 
 ### Adding New Automation Systems
 1. Create new file in `Systems/` folder
