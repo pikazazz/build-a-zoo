@@ -214,7 +214,7 @@ local function saveCustomAutoQuestSettings()
     if success then
         pcall(function()
             writefile("AutoQuestCustomSettings.json", encoded)
-            print("Auto Quest: Custom settings saved")
+            -- print("Auto Quest: Custom settings saved")
         end)
     end
 end
@@ -223,7 +223,7 @@ local function loadCustomAutoQuestSettings()
     if not readfile or not isfile or not HttpService then return end
     
     if not isfile("AutoQuestCustomSettings.json") then
-        print("Auto Quest: No custom settings file found, using defaults")
+        -- print("Auto Quest: No custom settings file found, using defaults")
         return
     end
     
@@ -232,7 +232,7 @@ local function loadCustomAutoQuestSettings()
     end)
     
     if not success then
-        print("Auto Quest: Failed to read custom settings file")
+        -- print("Auto Quest: Failed to read custom settings file")
         return
     end
     
@@ -259,9 +259,9 @@ local function loadCustomAutoQuestSettings()
             pcall(function() autoDeleteSlider:SetValue(tostring(autoDeleteMinSpeed)) end)
         end
         
-        print("Auto Quest: Custom settings loaded successfully")
-    else
-        print("Auto Quest: Failed to decode custom settings file")
+        -- print("Auto Quest: Custom settings loaded successfully")
+    -- else
+    --     print("Auto Quest: Failed to decode custom settings file")
     end
 end
 
@@ -584,7 +584,7 @@ local function buyMutatedEgg()
                                     local mutationText = mutateText.Text
                                     if mutationText and mutationText ~= "" then
                                         -- This egg has a mutation, try to buy it using the same method as main script
-                                        print("Auto Quest: Found mutated egg, attempting to buy: " .. eggModel.Name)
+                                        -- print("Auto Quest: Found mutated egg, attempting to buy: " .. eggModel.Name)
                                         
                                         -- Use the exact same buying method as main script
                                         local buySuccess = pcall(function()
@@ -601,10 +601,10 @@ local function buyMutatedEgg()
                                             end)
                                             
                                             actionCounter = actionCounter + 1
-                                            print("Auto Quest: Successfully bought mutated egg: " .. eggModel.Name)
+                                            -- print("Auto Quest: Successfully bought mutated egg: " .. eggModel.Name)
                                             return true, "Bought mutated egg: " .. eggModel.Name
-                                        else
-                                            print("Auto Quest: Failed to buy mutated egg: " .. eggModel.Name)
+                                        -- else
+                                        --     print("Auto Quest: Failed to buy mutated egg: " .. eggModel.Name)
                                         end
                                     end
                                 end
@@ -793,18 +793,18 @@ local function executeQuestTasks()
                     -- PRIORITY 1: Check for ready-to-hatch eggs on farm first
                     local hatchSuccess, hatchMessage = findAndHatchReadyEggs()
                     if hatchSuccess then
-                        print("Auto Quest HatchEgg: " .. hatchMessage)
+                        -- print("Auto Quest HatchEgg: " .. hatchMessage)
                         wait(1) -- Brief wait after hatching ready eggs
                     else
                         -- PRIORITY 2: Check if we have eggs in inventory to place
                         local eggInventory = getEggInventory()
                         if #eggInventory > 0 then
                             -- Let existing automation handle placing and hatching
-                            print("Auto Quest HatchEgg: Letting automation handle egg placement")
+                            -- print("Auto Quest HatchEgg: Letting automation handle egg placement")
                             wait(2)
                         else
                             -- PRIORITY 3: No eggs available, auto placement system will handle buying
-                            print("Auto Quest HatchEgg: No eggs available, auto placement will handle")
+                            -- print("Auto Quest HatchEgg: No eggs available, auto placement will handle")
                             wait(0.5) -- Brief pause before checking other tasks
                         end
                     end
@@ -813,7 +813,7 @@ local function executeQuestTasks()
                     local eggInventory = getEggInventory()
                     if #eggInventory == 0 then
                         -- Use same Auto Buy logic as main script
-                        print("Auto Quest SendEgg: No eggs in inventory, scanning conveyor belts")
+                        -- print("Auto Quest SendEgg: No eggs in inventory, scanning conveyor belts")
                         
                         local islandName = safeGetAttribute(LocalPlayer, "AssignedIslandName", nil)
                         if islandName then
@@ -848,7 +848,7 @@ local function executeQuestTasks()
                                                                     end)
                                                                     
                                                                     if buySuccess then
-                                                                        print("Auto Quest SendEgg: Bought egg for sending")
+                                                                        -- print("Auto Quest SendEgg: Bought egg for sending")
                                                                         foundEgg = true
                                                                         break
                                                                     end
@@ -860,9 +860,9 @@ local function executeQuestTasks()
                                                 end
                                             end
                                             
-                                            if not foundEgg then
-                                                print("Auto Quest SendEgg: No affordable eggs found on conveyor")
-                                            end
+                                            -- if not foundEgg then
+                                            --     print("Auto Quest SendEgg: No affordable eggs found on conveyor")
+                                            -- end
                                         end
                                     end
                                 end
@@ -1118,8 +1118,8 @@ local function getBestEggForPlacement()
         -- No current target, pick the fastest available
         currentPlacementTarget = availableEggs[1].type
         placementTargetTime = availableEggs[1].hatchTime
-        print(string.format("Auto Placement: Locked onto %s (hatch: %ds) as target", 
-            currentPlacementTarget, placementTargetTime))
+        -- print(string.format("Auto Placement: Locked onto %s (hatch: %ds) as target", 
+        --     currentPlacementTarget, placementTargetTime))
         saveCustomAutoQuestSettings()
     end
     
@@ -1138,14 +1138,14 @@ local function getBestEggForPlacement()
     if fastestAvailable.hatchTime < (placementTargetTime / 2) then
         currentPlacementTarget = fastestAvailable.type
         placementTargetTime = fastestAvailable.hatchTime
-        print(string.format("Auto Placement: Upgraded target to %s (hatch: %ds) - significantly faster!", 
-            currentPlacementTarget, placementTargetTime))
+        -- print(string.format("Auto Placement: Upgraded target to %s (hatch: %ds) - significantly faster!", 
+        --     currentPlacementTarget, placementTargetTime))
         saveCustomAutoQuestSettings()
         return fastestAvailable
     else
         -- Fallback to next best available (don't change target)
-        print(string.format("Auto Placement: Target %s unavailable, using fallback %s (hatch: %ds)", 
-            currentPlacementTarget, fastestAvailable.type, fastestAvailable.hatchTime))
+        -- print(string.format("Auto Placement: Target %s unavailable, using fallback %s (hatch: %ds)", 
+        --     currentPlacementTarget, fastestAvailable.type, fastestAvailable.hatchTime))
         return fastestAvailable
     end
 end
@@ -1416,7 +1416,7 @@ findAndHatchReadyEggs = function()
         local model = readyEggs[i]
         if tryHatchModel(model) then
             hatchedCount = hatchedCount + 1
-            print(string.format("Auto Placement: Hatched ready egg %d/%d", i, #readyEggs))
+            -- print(string.format("Auto Placement: Hatched ready egg %d/%d", i, #readyEggs))
             wait(0.5) -- Small delay between hatches
         end
     end
@@ -1503,7 +1503,7 @@ local function runAutoPlacementSystem()
             -- PRIORITY 1: Check for ready-to-hatch eggs first
             local hatchSuccess, hatchMessage = findAndHatchReadyEggs()
             if hatchSuccess then
-                print("Auto Placement: " .. hatchMessage)
+                -- print("Auto Placement: " .. hatchMessage)
                 wait(2) -- Wait after hatching before continuing
             else
                 -- PRIORITY 2: Check for empty tiles to place new eggs
@@ -1532,15 +1532,15 @@ local function runAutoPlacementSystem()
                                 wait(0.1)
                                 VirtualInputManager:SendMouseButtonEvent(screenPoint.X, screenPoint.Y, 0, false, game, 1)
                                 
-                                print(string.format("Auto Placement: Placed %s (hatch: %ds) on empty tile", 
-                                    bestEgg.type, bestEgg.hatchTime))
+                                -- print(string.format("Auto Placement: Placed %s (hatch: %ds) on empty tile", 
+                                    -- bestEgg.type, bestEgg.hatchTime))
                                 wait(2) -- Wait before next placement attempt
                             end
                         else
                             -- No eggs available, try to buy one
                             local buySuccess, buyMessage = buyAnyCheapestEgg()
                             if buySuccess then
-                                print("Auto Placement: " .. buyMessage)
+                                -- print("Auto Placement: " .. buyMessage)
                                 wait(1) -- Wait for purchase to process
                             else
                                 wait(5) -- Wait longer if buying failed
@@ -1550,7 +1550,7 @@ local function runAutoPlacementSystem()
                         -- No empty tiles, try auto-deletion if enabled
                         if autoDeleteMinSpeed > 0 then
                             local deletedCount, deleteMessage = autoDeleteSlowPets(autoDeleteMinSpeed)
-                            print("Auto Placement: " .. deleteMessage)
+                            -- print("Auto Placement: " .. deleteMessage)
                             
                             if deletedCount > 0 then
                                 wait(2) -- Wait for deletion to process, then check for empty tiles again
@@ -1566,7 +1566,7 @@ local function runAutoPlacementSystem()
         else
             -- No HatchEgg task active, reset placement target
             if currentPlacementTarget then
-                print("Auto Placement: Reset target - no HatchEgg task active")
+                -- print("Auto Placement: Reset target - no HatchEgg task active")
                 currentPlacementTarget = nil
                 placementTargetTime = math.huge
                 saveCustomAutoQuestSettings()
@@ -1730,9 +1730,9 @@ function AutoQuestSystem.Init(dependencies)
             local numValue = tonumber(value) or 0
             autoDeleteMinSpeed = numValue
             if numValue > 0 then
-                print("Auto Delete: Enabled for pets below speed " .. numValue)
+                -- print("Auto Delete: Enabled for pets below speed " .. numValue)
             else
-                print("Auto Delete: Disabled")
+                -- print("Auto Delete: Disabled")
             end
             -- Auto-save custom settings when changed
             saveCustomAutoQuestSettings()

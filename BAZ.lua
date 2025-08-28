@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local TeleportService = game:GetService("TeleportService")
 local vector = { create = function(x, y, z) return Vector3.new(x, y, z) end }
 local LocalPlayer = Players.LocalPlayer
 
@@ -28,6 +29,8 @@ local function waitForSettingsReady(extraDelay)
     end
 end
 local autoFeedToggle
+
+-- Forward declarations
 
 -- Window
 local Window = WindUI:CreateWindow({
@@ -58,9 +61,9 @@ Tabs.SaveTab = Tabs.MainSection:Tab({ Title = "💾 | Save Settings"})
 -- Function to load all saved settings before any function starts
 local function loadAllSettings()
     -- Load WindUI config for simple UI elements
-    if zooConfig then
+    if zebuxConfig then
         local loadSuccess, loadErr = pcall(function()
-            zooConfig:Load()
+            zebuxConfig:Load()
         end)
         
         if not loadSuccess then
@@ -147,9 +150,9 @@ end
 -- Function to save all settings (WindUI config + custom selections)
 local function saveAllSettings()
     -- Save WindUI config for simple UI elements
-    if zooConfig then
+    if zebuxConfig then
         local saveSuccess, saveErr = pcall(function()
-            zooConfig:Save()
+            zebuxConfig:Save()
         end)
         
         if not saveSuccess then
@@ -864,140 +867,8 @@ local function isTileUnlocked(islandName, tilePosition)
     return true -- Tile is unlocked
 end
 
--- Debug function removed per user request
-local function debugTileLockRelationship()
-    local islandName = getAssignedIslandName()
-    if not islandName then
-        -- Debug notify removed
-        return
-    end
-    
-    local art = workspace:FindFirstChild("Art")
-    if not art then
-        -- Debug notify removed
-        return
-    end
-    
-    local island = art:FindFirstChild(islandName)
-    if not island then
-        -- Debug notify removed
-        return
-    end
-    
-    -- Get all farm split tiles
-    local farmSplits = {}
-    local function scanForFarmParts(parent)
-        for _, child in ipairs(parent:GetChildren()) do
-            if child:IsA("BasePart") and child.Name:match("^Farm_split_%d+_%d+_%d+$") then
-                if child.Size == Vector3.new(8, 8, 8) and child.CanCollide then
-                    table.insert(farmSplits, {
-                        name = child.Name,
-                        position = child.Position,
-                        cframe = child.CFrame,
-                        size = child.Size,
-                        locked = false,
-                        lockModel = nil,
-                        lockInfo = nil
-                    })
-                end
-            end
-            scanForFarmParts(child)
-        end
-    end
-    scanForFarmParts(island)
-    
-    -- Get all locks
-    local locks = {}
-    local locksFolder = island:FindFirstChild("ENV"):FindFirstChild("Locks")
-    if locksFolder then
-        for _, lockModel in ipairs(locksFolder:GetChildren()) do
-            if lockModel:IsA("Model") then
-                local farmPart = lockModel:FindFirstChild("Farm")
-                if farmPart and farmPart:IsA("BasePart") then
-                    table.insert(locks, {
-                        modelName = lockModel.Name,
-                        position = farmPart.Position,
-                        cframe = farmPart.CFrame,
-                        size = farmPart.Size,
-                        transparency = farmPart.Transparency,
-                        isLocked = farmPart.Transparency == 0
-                    })
-                end
-            end
-        end
-    end
-    
-    -- Match farm splits with locks using area overlap
-    for _, farmSplit in ipairs(farmSplits) do
-        for _, lock in ipairs(locks) do
-            if lock.isLocked then
-                -- Check if farm part is within the lock area
-                local farmPartPos = farmSplit.position
-                local lockCenter = lock.position
-                local lockSize = lock.size
-                
-                -- Calculate the bounds of the lock area
-                local lockHalfSize = lockSize / 2
-                local lockMinX = lockCenter.X - lockHalfSize.X
-                local lockMaxX = lockCenter.X + lockHalfSize.X
-                local lockMinZ = lockCenter.Z - lockHalfSize.Z
-                local lockMaxZ = lockCenter.Z + lockHalfSize.Z
-                
-                -- Check if farm part is within the lock bounds
-                if farmPartPos.X >= lockMinX and farmPartPos.X <= lockMaxX and
-                   farmPartPos.Z >= lockMinZ and farmPartPos.Z <= lockMaxZ then
-                    farmSplit.locked = true
-                    farmSplit.lockModel = lock.modelName
-                    farmSplit.lockInfo = string.format("Lock: %s (Size: %s)", lock.modelName, tostring(lock.size))
-                    break
-                end
-            end
-        end
-    end
-    
-    -- Create debug message
-    local message = string.format("🏝️ Island: %s\n", islandName)
-    message = message .. string.format("📊 Total Farm Splits: %d\n", #farmSplits)
-    message = message .. string.format("🔒 Total Locks: %d\n\n", #locks)
-    
-    -- Show lock information first
-    message = message .. "🔒 LOCK INFORMATION:\n"
-    for i, lock in ipairs(locks) do
-        if lock.isLocked then
-            message = message .. string.format("  %s: Pos(%s) Size(%s) Transp(%s)\n", 
-                lock.modelName, 
-                string.format("%.1f,%.1f,%.1f", lock.position.X, lock.position.Y, lock.position.Z),
-                tostring(lock.size),
-                tostring(lock.transparency))
-        end
-        if i >= 5 then break end
-    end
-    
-    message = message .. "\n📋 FARM SPLIT STATUS:\n"
-    local unlockedCount = 0
-    local lockedCount = 0
-    
-    for i, farmSplit in ipairs(farmSplits) do
-        if farmSplit.locked then
-            lockedCount = lockedCount + 1
-            message = message .. string.format("🔒 %s: LOCKED\n  %s\n", 
-                farmSplit.name, farmSplit.lockInfo or "Unknown")
-        else
-            unlockedCount = unlockedCount + 1
-            message = message .. string.format("✅ %s: UNLOCKED\n", farmSplit.name)
-        end
-        
-        -- Limit message length
-        if i >= 8 then
-            message = message .. "... (showing first 8)\n"
-            break
-        end
-    end
-    
-    message = message .. string.format("\n📈 Summary: %d unlocked, %d locked", unlockedCount, lockedCount)
-    
-    -- Debug notify removed
-end
+
+
 
 local function getPetUID()
     if not LocalPlayer then return nil end
@@ -1040,7 +911,7 @@ local function getEggContainer()
     return data and data:FindFirstChild("Egg") or nil
 end
 
--- Function to read mutation from egg configuration
+-- Function to read mutation from egg configuration (for Auto Place)
 local function getEggMutation(eggUID)
     local localPlayer = Players.LocalPlayer
     if not localPlayer then return nil end
@@ -1066,6 +937,56 @@ local function getEggMutation(eggUID)
     end
     
     return mutation
+end
+
+-- Function to read mutation from GUI text on conveyor belt (for Auto Buy)
+local function getEggMutationFromGUI(eggUID)
+    local islandName = getAssignedIslandName()
+    if not islandName then return nil end
+    
+    local art = workspace:FindFirstChild("Art")
+    if not art then return nil end
+    
+    local island = art:FindFirstChild(islandName)
+    if not island then return nil end
+    
+    local env = island:FindFirstChild("ENV")
+    if not env then return nil end
+    
+    local conveyor = env:FindFirstChild("Conveyor")
+    if not conveyor then return nil end
+    
+    -- Check all conveyor belts
+    for i = 1, 9 do
+        local conveyorBelt = conveyor:FindFirstChild("Conveyor" .. i)
+        if conveyorBelt then
+            local belt = conveyorBelt:FindFirstChild("Belt")
+            if belt then
+                local eggModel = belt:FindFirstChild(eggUID)
+                if eggModel and eggModel:IsA("Model") then
+                    local rootPart = eggModel:FindFirstChild("RootPart")
+                    if rootPart then
+                        local eggGUI = rootPart:FindFirstChild("GUI/EggGUI")
+                        if eggGUI then
+                            local mutateText = eggGUI:FindFirstChild("Mutate")
+                            if mutateText and mutateText:IsA("TextLabel") then
+                                local mutationText = mutateText.Text
+                                if mutationText and mutationText ~= "" then
+                                    -- Map "Dino" to "Jurassic" for consistency
+                                    if string.lower(mutationText) == "dino" then
+                                        return "Jurassic"
+                                    end
+                                    return mutationText
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    return nil
 end
 
 local function listAvailableEggUIDs()
@@ -1573,10 +1494,11 @@ local EggData = {
     EpicEgg = { Name = "Epic Egg", Price = "15,000", Icon = "rbxassetid://116395645531721", Rarity = 2 },
     LegendEgg = { Name = "Legend Egg", Price = "100,000", Icon = "rbxassetid://90834918351014", Rarity = 3 },
     PrismaticEgg = { Name = "Prismatic Egg", Price = "1,000,000", Icon = "rbxassetid://79960683434582", Rarity = 4 },
-    HyperEgg = { Name = "Hyper Egg", Price = "3,000,000", Icon = "rbxassetid://104958288296273", Rarity = 5 },
+    HyperEgg = { Name = "Hyper Egg", Price = "2,500,000", Icon = "rbxassetid://104958288296273", Rarity = 4 },
     VoidEgg = { Name = "Void Egg", Price = "24,000,000", Icon = "rbxassetid://122396162708984", Rarity = 5 },
     BowserEgg = { Name = "Bowser Egg", Price = "130,000,000", Icon = "rbxassetid://71500536051510", Rarity = 5 },
     DemonEgg = { Name = "Demon Egg", Price = "400,000,000", Icon = "rbxassetid://126412407639969", Rarity = 5 },
+    CornEgg = { Name = "Corn Egg", Price = "1,000,000,000", Icon = "rbxassetid://94739512852461", Rarity = 5 },
     BoneDragonEgg = { Name = "Bone Dragon Egg", Price = "2,000,000,000", Icon = "rbxassetid://83209913424562", Rarity = 5 },
     UltraEgg = { Name = "Ultra Egg", Price = "10,000,000,000", Icon = "rbxassetid://83909590718799", Rarity = 6 },
     DinoEgg = { Name = "Dino Egg", Price = "10,000,000,000", Icon = "rbxassetid://80783528632315", Rarity = 6 },
@@ -1594,11 +1516,12 @@ local MutationData = {
 }
 
 -- Load UI modules
-local EggSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZebuxHub/Main/refs/heads/main/EggSelection.lua"))()
-local FruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZebuxHub/Main/refs/heads/main/FruitSelection.lua"))()
-local FeedFruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZebuxHub/Main/refs/heads/main/FeedFruitSelection.lua"))()
-local AutoFeedSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZebuxHub/Main/refs/heads/main/AutoFeedSystem.lua"))()
+local EggSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/EggSelection.lua"))()
+local FruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/FruitSelection.lua"))()
+local FeedFruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/FeedFruitSelection.lua"))()
+local AutoFeedSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/AutoFeedSystem.lua"))()
 -- FruitStoreSystem functions are now implemented locally in the auto buy fruit section
+local AutoQuestSystem = nil
 
 -- UI state
 local eggSelectionVisible = false
@@ -1661,13 +1584,17 @@ local autoBuyThread = nil
 local autoFeedEnabled = false
 local autoFeedThread = nil
 
--- Feed status tracking removed per user request
 
 
 
--- Status tracking removed per user request
 
--- Status section removed per user request
+
+
+
+
+
+
+
 
 local function shouldBuyEggInstance(eggInstance, playerMoney)
     if not eggInstance or not eggInstance:IsA("Model") then return false, nil, nil end
@@ -1686,7 +1613,7 @@ local function shouldBuyEggInstance(eggInstance, playerMoney)
     
     -- Now check mutation if mutations are selected
     if selectedMutationSet and next(selectedMutationSet) then
-        local eggMutation = getEggMutation(eggInstance.Name)
+        local eggMutation = getEggMutationFromGUI(eggInstance.Name)
         
         if not eggMutation then
             -- If mutations are selected but egg has no mutation, skip this egg
@@ -1694,10 +1621,9 @@ local function shouldBuyEggInstance(eggInstance, playerMoney)
         end
         
         -- Check if egg has a selected mutation
-                           -- getEggMutation handles "Dino" -> "Jurassic" conversion
-                   if not selectedMutationSet[eggMutation] then
-                       return false, nil, nil
-                   end
+        if not selectedMutationSet[eggMutation] then
+            return false, nil, nil
+        end
     end
 
     -- Get price from hardcoded data or instance attribute
@@ -1766,8 +1692,45 @@ local function buyEggInstantly(eggInstance)
     local ok, uid, price = shouldBuyEggInstance(eggInstance, netWorth)
     
     if ok then
+        -- Retry mechanism - try up to 3 times with delays
+        local maxRetries = 3
+        local retryCount = 0
+        local buySuccess = false
+        
+        while retryCount < maxRetries and not buySuccess do
+            retryCount = retryCount + 1
+            
+            -- Check if egg still exists and is still valid
+            if not eggInstance or not eggInstance.Parent then
+
+                break
+            end
+            
+            -- Check if we still want to buy it (price might have changed)
+            local stillOk, stillUid, stillPrice = shouldBuyEggInstance(eggInstance, getPlayerNetWorth())
+            if not stillOk then
+
+                break
+            end
+            
+            -- Try to buy
+            local buyResult = pcall(function()
         buyEggByUID(uid)
         focusEggByUID(uid)
+            end)
+            
+            if buyResult then
+
+                buySuccess = true
+            else
+
+                wait(0.5) -- Wait 0.5 seconds before retry
+            end
+        end
+        
+        if not buySuccess then
+    
+        end
     end
     
     buyingInProgress = false
@@ -1808,7 +1771,12 @@ local function setupBeltMonitoring(belt)
     end)
     
     -- Store thread for cleanup
-    beltConnections[#beltConnections + 1] = { disconnect = function() checkThread = nil end }
+    beltConnections[#beltConnections + 1] = { disconnect = function() 
+        if checkThread then
+            task.cancel(checkThread)
+            checkThread = nil 
+        end
+    end }
 end
 
 local function runAutoBuy()
@@ -1877,7 +1845,7 @@ local selectedMutations = {} -- Selected mutations for placement
 local tileMonitoringActive = false
 
 
--- Place status tracking removed per user request
+
 
 -- Function to get egg options
 local function getEggOptions()
@@ -1917,7 +1885,7 @@ end
 local placeEggDropdown = Tabs.PlaceTab:Dropdown({
     Title = "🥚 Pick Pet Types",
     Desc = "Choose which pets to place",
-    Values = {"BasicEgg", "RareEgg", "SuperRareEgg", "EpicEgg", "LegendEgg", "PrismaticEgg", "HyperEgg", "VoidEgg", "BowserEgg", "DemonEgg", "BoneDragonEgg", "UltraEgg", "DinoEgg", "FlyEgg", "UnicornEgg", "AncientEgg"},
+    Values = {"BasicEgg", "RareEgg", "SuperRareEgg", "EpicEgg", "LegendEgg", "PrismaticEgg", "HyperEgg", "VoidEgg", "BowserEgg", "DemonEgg", "CornEgg", "BoneDragonEgg", "UltraEgg", "DinoEgg", "FlyEgg", "UnicornEgg", "AncientEgg"},
     Value = {},
     Multi = true,
     AllowNone = true,
@@ -2580,7 +2548,7 @@ local autoPlaceToggle = Tabs.PlaceTab:Toggle({
 local autoUnlockEnabled = false
 local autoUnlockThread = nil
 
--- Unlock status tracking removed per user request
+
 
 -- Function to get all locked tiles
 local function getLockedTiles()
@@ -2742,7 +2710,7 @@ local autoDeleteEnabled = false
 local autoDeleteThread = nil
 local deleteSpeedThreshold = 100 -- Default speed threshold
 
--- Delete status tracking removed per user request
+
 
 local autoDeleteSpeedSlider = Tabs.PlaceTab:Input({
     Title = "Speed Threshold",
@@ -2862,8 +2830,20 @@ local autoDeleteToggle = Tabs.PlaceTab:Toggle({
 
 
 
--- Anchor workflow removed (no longer needed)
-Window:EditOpenButton({ Title = "Build A Zoo", Icon = "monitor", Draggable = true })
+-- Enhanced Open Button UI
+Window:EditOpenButton({
+    Title = "Build A Zoo",
+    Icon = "monitor",
+    CornerRadius = UDim.new(0,16),
+    StrokeThickness = 2,
+    Color = ColorSequence.new( -- gradient
+        Color3.fromHex("FF0F7B"), 
+        Color3.fromHex("F89B29")
+    ),
+    OnlyMobile = false,
+    Enabled = true,
+    Draggable = true,
+})
 
 -- Close callback
 Window:OnClose(function()
@@ -3151,7 +3131,7 @@ Tabs.ShopTab:Button({
 
 -- ============ Fruit Market (Auto Buy Fruit) ============
 -- Load Fruit Selection UI
-local FruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/ZebuxHub/Main/refs/heads/main/FruitSelection.lua"))()
+local FruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/FruitSelection.lua"))()
 
 -- Fruit Data for auto buy functionality
 local FruitData = {
@@ -3495,6 +3475,7 @@ local function registerUIElements()
     -- Register sliders/inputs
     registerIfExists("autoClaimDelaySlider", autoClaimDelaySlider)
     registerIfExists("autoDeleteSpeedSlider", autoDeleteSpeedSlider)
+
 end
 
 -- ============ Anti-AFK System ============
@@ -3570,6 +3551,8 @@ Tabs.SaveTab:Button({
         end
     end
 })
+
+
 
  
 
@@ -3792,6 +3775,40 @@ task.spawn(function()
     
     -- Register all UI elements with WindUI config
     registerUIElements()
+
+    -- Load local AutoQuest module and initialize its UI. Keep it after base UI exists so it can attach to Window and Config
+    pcall(function()
+        local autoQuestModule = nil
+        -- Try local file first (if present in environment with filesystem)
+        if isfile and isfile("AutoQuestSystem.lua") then
+            autoQuestModule = loadstring(readfile("AutoQuestSystem.lua"))()
+        end
+        -- Fallback: try from same directory
+        if not autoQuestModule then
+            local success, result = pcall(function()
+                return loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/AutoQuestSystem.lua"))()
+            end)
+            if success then
+                autoQuestModule = result
+            end
+        end
+        if autoQuestModule and autoQuestModule.Init then
+            AutoQuestSystem = autoQuestModule.Init({
+                WindUI = WindUI,
+                Window = Window,
+                Config = zebuxConfig,
+                waitForSettingsReady = waitForSettingsReady,
+                -- Pass existing automation references so AutoQuest can control them
+                autoBuyToggle = autoBuyToggle,
+                autoPlaceToggle = autoPlaceToggle,
+                autoHatchToggle = autoHatchToggle,
+                -- Pass automation state variables
+                getAutoBuyEnabled = function() return autoBuyEnabled end,
+                getAutoPlaceEnabled = function() return autoPlaceEnabled end,
+                getAutoHatchEnabled = function() return autoHatchEnabled end,
+            })
+        end
+    end)
     
     -- Load WindUI config settings
     zebuxConfig:Load()
@@ -3913,15 +3930,10 @@ task.spawn(function()
     end
 end)
 
-
-
-
--- Bug report system removed per user request
-
 -- Safe window close handler
 local ok, err = pcall(function()
 Window:OnClose(function()
-    print("UI closed.")
+
 end)
 end)
 
