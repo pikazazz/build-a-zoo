@@ -37,7 +37,7 @@ local Window = WindUI:CreateWindow({
     Title = "Build A Zoo",
     Icon = "app-window-mac",
     IconThemed = true,
-    Author = "Zebux",
+    Author = "m0rgause",
     Folder = "Zebux",
     Size = UDim2.fromOffset(520, 360),
     Transparent = true,
@@ -3075,10 +3075,10 @@ local autoUpgradeToggle = Tabs.ShopTab:Toggle({
                         for _, a in ipairs(actions) do
                             setShopStatus(string.format("Upgrading %d (cost %s)", a.idx, tostring(a.cost)))
                             if fireConveyorUpgrade(a.idx) then
-                                shopStatus.upgradesDone += 1
+                                shopStatus.upgradesDone = shopStatus.upgradesDone + 1
                                 purchasedUpgrades[a.idx] = true
                             end
-                            shopStatus.upgradesTried += 1
+                            shopStatus.upgradesTried = shopStatus.upgradesTried + 1
                             task.wait(0.2)
                         end
                     end
@@ -3107,10 +3107,10 @@ Tabs.ShopTab:Button({
         end
         for _, a in ipairs(actions) do
             if fireConveyorUpgrade(a.idx) then
-                shopStatus.upgradesDone += 1
+                shopStatus.upgradesDone = shopStatus.upgradesDone + 1
                 purchasedUpgrades[a.idx] = true
             end
-            shopStatus.upgradesTried += 1
+            shopStatus.upgradesTried = shopStatus.upgradesTried + 1
             task.wait(0.1)
         end
         setShopStatus("Upgraded " .. tostring(#actions) .. " items!")
@@ -3337,18 +3337,6 @@ local autoBuyFruitToggle = Tabs.FruitTab:Toggle({
         end
     end
 })
-
-
-
- 
-
-
-
- 
-
- 
-
- 
 
 -- ============ WindUI ConfigManager System ============
 
@@ -3916,7 +3904,7 @@ task.spawn(function()
     -- Wait until settings load sequence either completed or shortly timed in
     local tries = 0
     while not (zebuxConfig and autoFeedToggle) and tries < 50 do
-        tries += 1
+        tries = tries + 1
         task.wait(0.05)
     end
     if zebuxConfig and autoFeedToggle then
