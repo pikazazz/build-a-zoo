@@ -1,4 +1,50 @@
--- Build A Zoo: Auto Buy Egg using WindUI
+-- ===================================================
+--      ระบบยืนยันตัวตนเบื้องต้น (Static UserID Auth)
+-- ===================================================
+
+-- -- [[ การตั้งค่า ]] --
+-- V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V
+
+-- ใส่ Roblox UserID ของผู้ที่ได้รับอนุญาตให้ใช้สคริปต์ในนี้
+-- วิธีหา UserID: ไปที่หน้าโปรไฟล์ Roblox ของคุณ, ดูที่ URL จะมีตัวเลขอยู่ชุดหนึ่ง นั่นคือ UserID ของคุณ
+local allowedUserIDs = {
+    9619454346,   -- <<! แก้ไขเป็น UserID ของคุณ
+}
+
+
+
+
+-- -- [[ ระบบตรวจสอบ (ห้ามแก้ไข) ]] --
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local isAuthorized = false
+
+for _, id in ipairs(allowedUserIDs) do
+    if LocalPlayer.UserId == id then
+        isAuthorized = true
+        break
+    end
+end
+
+if not isAuthorized then
+    -- ถ้า UserID ของผู้เล่นไม่ตรงกับในลิสต์
+    -- จะแสดงข้อความใน Console และหยุดการทำงานของสคริปต์ทั้งหมดทันที
+    warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    warn("!!!      AUTHENTICATION FAILED            !!!")
+    warn("!!! UserID ของคุณไม่ได้รับอนุญาตให้ใช้งานสคริปต์นี้ !!!")
+    warn("!!! UserID ของคุณคือ: " .. LocalPlayer.UserId .. " !!!")
+    warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    return -- <--- คำสั่งสำคัญในการหยุดสคริปต์
+else
+    -- ถ้า UserID ตรงกัน จะแสดงข้อความต้อนรับและทำงานต่อ
+    print("---------------------------------------------")
+    print("---      Authentication Successful        ---")
+    print("---      Welcome, " .. LocalPlayer.Name)
+    print("---------------------------------------------")
+end
+-- ===================================================
+--      (โค้ดสคริปต์เดิมของคุณทั้งหมดจะอยู่ต่อจากนี้)
+-- ===================================================
+
 
 -- Load WindUI library (same as in Windui.lua)
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
@@ -37,7 +83,7 @@ local Window = WindUI:CreateWindow({
     Title = "Build A Zoo",
     Icon = "app-window-mac",
     IconThemed = true,
-    Author = "m0rgause",
+    Author = "pikazazz",
     Folder = "Zebux",
     Size = UDim2.fromOffset(520, 360),
     Transparent = true,
@@ -55,6 +101,9 @@ Tabs.ShopTab = Tabs.MainSection:Tab({ Title = "🛒 | Shop"})
 Tabs.PackTab = Tabs.MainSection:Tab({ Title = "🎁 | Get Packs"})
 Tabs.FruitTab = Tabs.MainSection:Tab({ Title = "🍎 | Fruit Store"})
 Tabs.FeedTab = Tabs.MainSection:Tab({ Title = "🍽️ | Auto Feed"})
+
+Tabs.DebugTab = Tabs.MainSection:Tab({ Title = "🐞 | Debug Log"})
+
 -- Bug tab removed per user request
 Tabs.SaveTab = Tabs.MainSection:Tab({ Title = "💾 | Save Settings"})
 
@@ -939,6 +988,67 @@ local function getEggMutation(eggUID)
     return mutation
 end
 
+
+-- ============ Logger System ============
+
+-- สร้างตารางสำหรับเก็บข้อความ Log ล่าสุด (เก็บสูงสุด 15 ข้อความ)
+local logMessages = {}
+local MAX_LOG_MESSAGES = 15
+
+-- สร้าง Tab ใหม่สำหรับ Logger
+Tabs.LogTab = Tabs.MainSection:Tab({ Title = "📜 | System Log"})
+
+-- สร้าง Paragraph สำหรับแสดงผล Log
+local logDisplayParagraph = Tabs.LogTab:Paragraph({
+    Title = "📜 System Log",
+    Desc = "ยังไม่มีข้อมูล...",
+    Image = "info-circle",
+    ImageSize = 20
+})
+
+-- สร้างปุ่มสำหรับล้าง Log
+Tabs.LogTab:Button({
+    Title = "🗑️ Clear Log",
+    Desc = "ล้างข้อความทั้งหมดในหน้าต่าง Log",
+    Callback = function()
+        logMessages = {}
+        logDisplayParagraph:SetDesc("Log has been cleared.")
+    end
+})
+
+--[[
+    ฟังก์ชัน MixLog (Morgause's Mix-in Logger)
+    ใช้สำหรับส่งข้อความไปแสดงผลทั้งใน Console และหน้าต่าง Logger UI
+    พร้อมใส่เวลาปัจจุบันให้อัตโนมัติ
+]]
+function MixLog(message)
+    -- ตรวจสอบว่า message เป็น string หรือไม่
+    local messageStr = tostring(message)
+    
+    -- เพิ่มเวลาปัจจุบันนำหน้าข้อความ
+    local timestamp = os.date("[%H:%M:%S]")
+    local formattedMessage = string.format("%s %s", timestamp, messageStr)
+
+    -- 1. แสดงผลใน Console (สำหรับดีบักเชิงลึก)
+    print(formattedMessage)
+
+    -- 2. เพิ่มข้อความใหม่เข้าไปในตาราง (แสดงบนสุด)
+    table.insert(logMessages, 1, formattedMessage)
+
+    -- 3. หากข้อความเกินจำนวนสูงสุด ให้ลบอันที่เก่าที่สุดออก
+    if #logMessages > MAX_LOG_MESSAGES then
+        table.remove(logMessages)
+    end
+
+    -- 4. อัปเดตข้อความใน UI
+    -- ตรวจสอบให้แน่ใจว่า UI พร้อมใช้งานแล้ว
+    if logDisplayParagraph and logDisplayParagraph.SetDesc then
+        logDisplayParagraph:SetDesc(table.concat(logMessages, "\n"))
+    end
+end
+
+
+
 -- Function to read mutation from GUI text on conveyor belt (for Auto Buy)
 local function getEggMutationFromGUI(eggUID)
     local islandName = getAssignedIslandName()
@@ -973,6 +1083,7 @@ local function getEggMutationFromGUI(eggUID)
                                 local mutationText = mutateText.Text
                                 if mutationText and mutationText ~= "" then
                                     -- Map "Dino" to "Jurassic" for consistency
+                                    MixLog("Detected mutation from GUI: " .. mutationText)
                                     if string.lower(mutationText) == "dino" then
                                         return "Jurassic"
                                     end
@@ -1134,6 +1245,148 @@ local autoClaimToggle = Tabs.ClaimTab:Toggle({
             WindUI:Notify({ Title = "💰 Auto Claim", Content = "Started collecting money! 🎉", Duration = 3 })
         elseif (not state) and autoClaimThread then
             WindUI:Notify({ Title = "💰 Auto Claim", Content = "Stopped", Duration = 3 })
+        end
+    end
+})
+
+
+-- ============ Debug Log Tab ============
+
+local debugLogEnabled = false
+local debugLogThread = nil
+
+-- สร้าง UI Elements สำหรับแสดงผล
+local playerLogParagraph = Tabs.DebugTab:Paragraph({
+    Title = "👤 ข้อมูลตัวละคร",
+    Desc = "ปิดใช้งานอยู่...",
+    Image = "user",
+    ImageSize = 20
+})
+
+local eggLogParagraph = Tabs.DebugTab:Paragraph({
+    Title = "🥚 ไข่บนสายพาน",
+    Desc = "ปิดใช้งานอยู่...",
+    Image = "egg",
+    ImageSize = 20
+})
+
+-- ฟังก์ชันสำหรับอัปเดตข้อมูลใน UI (ฉบับแก้ไข)
+-- ฟังก์ชันสำหรับอัปเดตข้อมูลใน UI (ฉบับแก้ไขพร้อม Debug)
+local function runDebugLog()
+    -- Print นี้จะแสดงแค่ครั้งเดียวเมื่อฟังก์ชันเริ่มทำงาน
+    print("[Debug Log] ฟังก์ชัน runDebugLog เริ่มทำงานแล้ว")
+
+    while debugLogEnabled do
+        print("[Debug Log] เริ่มต้น Loop การอัปเดต...")
+
+        -- ใช้ pcall ครอบการทำงานทั้งหมดใน loop เพื่อดักจับ Error ที่อาจเกิดขึ้น
+        local success, err = pcall(function()
+            
+            -- --- ส่วนที่ 1: อัปเดตข้อมูลผู้เล่น ---
+            print("[Debug Log] กำลังรวบรวมข้อมูลผู้เล่น...")
+            local playerInfoData = {
+                string.format("ชื่อ: %s", LocalPlayer.Name),
+                string.format("เงิน (Net Worth): %.2f", getPlayerNetWorth()),
+            }
+
+            local islandName = getAssignedIslandName()
+            print("[Debug Log] Island ที่พบ: ", tostring(islandName)) -- ตรวจสอบว่าหาเกาะเจอหรือไม่
+            table.insert(playerInfoData, string.format("เกาะ: %s", islandName or "N/A"))
+
+            local playerPos = getPlayerRootPosition()
+            if playerPos then
+                table.insert(playerInfoData, string.format("ตำแหน่ง: X: %.1f, Y: %.1f, Z: %.1f", playerPos.X, playerPos.Y, playerPos.Z))
+            else
+                table.insert(playerInfoData, "ตำแหน่ง: N/A")
+            end
+
+            table.insert(playerInfoData, string.format("ไข่ในตัว: %d ฟอง", #listAvailableEggUIDs()))
+            
+            -- ตรวจสอบก่อนว่า UI Element พร้อมใช้งานหรือไม่
+            if playerLogParagraph and playerLogParagraph.SetDesc then
+                playerLogParagraph:SetDesc(table.concat(playerInfoData, "\n"))
+                print("[Debug Log] อัปเดตข้อมูลผู้เล่นบน UI สำเร็จ")
+            else
+                print("[Debug Log] Error: UI 'playerLogParagraph' ไม่พร้อมใช้งาน!")
+            end
+
+            -- --- ส่วนที่ 2: อัปเดตข้อมูลไข่บนสายพาน ---
+            print("[Debug Log] กำลังรวบรวมข้อมูลไข่...")
+            if not islandName then
+                eggLogParagraph:SetDesc("ไม่พบข้อมูลเกาะ...")
+                print("[Debug Log] ออกจากการทำงานส่วนไข่ เพราะไม่พบ islandName")
+                return
+            end
+            
+            local activeBelt = getActiveBelt(islandName)
+            print("[Debug Log] Active Belt ที่พบ: ", tostring(activeBelt)) -- ตรวจสอบว่าหาสายพานเจอหรือไม่
+            if not activeBelt then
+                eggLogParagraph:SetDesc("ไม่พบสายพานที่ใช้งานอยู่...")
+                print("[Debug Log] ออกจากการทำงานส่วนไข่ เพราะไม่พบ activeBelt")
+                return
+            end
+
+            local eggsOnBelt = {}
+            for _, child in ipairs(activeBelt:GetChildren()) do
+                if child:IsA("Model") then
+                    local eggType = child:GetAttribute("Type") or "Unknown"
+                    local mutation = getEggMutationFromGUI(child.Name) or "None"
+                    local price = child:GetAttribute("Price") or 0
+                    table.insert(eggsOnBelt, string.format("- %s (Mut: %s) | ราคา: %d", eggType, mutation, price))
+                end
+            end
+
+            if eggLogParagraph and eggLogParagraph.SetDesc then
+                if #eggsOnBelt > 0 then
+                    eggLogParagraph:SetDesc(table.concat(eggsOnBelt, "\n"))
+                else
+                    eggLogParagraph:SetDesc("ไม่พบไข่บนสายพาน...")
+                end
+                print("[Debug Log] อัปเดตข้อมูลไข่บน UI สำเร็จ")
+            else
+                 print("[Debug Log] Error: UI 'eggLogParagraph' ไม่พร้อมใช้งาน!")
+            end
+        end)
+
+        -- ตรวจสอบผลลัพธ์ของ pcall
+        print("[Debug Log] pcall result -> success:", success)
+        if not success then
+            -- หาก pcall ทำงานไม่สำเร็จ (เกิด Error) ให้แสดงข้อความ Error ใน Log และ Console
+            print("[Debug Log] !!! เกิดข้อผิดพลาดร้ายแรง !!! ->", tostring(err))
+            if playerLogParagraph and playerLogParagraph.SetDesc then
+                playerLogParagraph:SetDesc("เกิดข้อผิดพลาด:\n" .. tostring(err))
+            end
+            if eggLogParagraph and eggLogParagraph.SetDesc then
+                 eggLogParagraph:SetDesc("---") -- เคลียร์ข้อมูลไข่
+            end
+        end
+        
+        print("[Debug Log] จบ Loop, รอ 1.5 วินาที...")
+        task.wait(1.5)
+    end
+end
+-- สร้างปุ่ม Toggle สำหรับเปิด/ปิด
+Tabs.DebugTab:Toggle({
+    Title = "เปิด/ปิด Live Debug Log",
+    Desc = "เปิดเพื่อดูข้อมูลแบบ Real-time (อาจใช้ทรัพยากรเครื่องเล็กน้อย)",
+    Value = false,
+    Callback = function(state)
+        debugLogEnabled = state
+        
+        if state then
+            if not debugLogThread then
+                debugLogThread = task.spawn(function()
+                    runDebugLog()
+                    debugLogThread = nil -- เคลียร์ thread เมื่อ loop จบ
+                end)
+                WindUI:Notify({ Title = "🐞 Debug Log", Content = "เปิดใช้งานแล้ว", Duration = 3 })
+            end
+        else
+            if playerLogParagraph and playerLogParagraph.SetDesc then
+                playerLogParagraph:SetDesc("ปิดใช้งานอยู่...")
+                eggLogParagraph:SetDesc("ปิดใช้งานอยู่...")
+            end
+            WindUI:Notify({ Title = "🐞 Debug Log", Content = "ปิดใช้งานแล้ว", Duration = 3 })
         end
     end
 })
@@ -1504,6 +1757,7 @@ local EggData = {
     DinoEgg = { Name = "Dino Egg", Price = "10,000,000,000", Icon = "rbxassetid://80783528632315", Rarity = 6 },
     FlyEgg = { Name = "Fly Egg", Price = "999,999,999,999", Icon = "rbxassetid://109240587278187", Rarity = 6 },
     UnicornEgg = { Name = "Unicorn Egg", Price = "40,000,000,000", Icon = "rbxassetid://123427249205445", Rarity = 6 },
+    
     AncientEgg = { Name = "Ancient Egg", Price = "999,999,999,999", Icon = "rbxassetid://113910587565739", Rarity = 6 }
 }
 
@@ -1512,14 +1766,19 @@ local MutationData = {
     Diamond = { Name = "Diamond", Icon = "💎", Rarity = 20 },
     Electirc = { Name = "Electric", Icon = "⚡", Rarity = 50 },
     Fire = { Name = "Fire", Icon = "🔥", Rarity = 100 },
-    Jurassic = { Name = "Jurassic", Icon = "🦕", Rarity = 100 }
+    Jurassic = { Name = "Jurassic", Icon = "🦕", Rarity = 100 },
+    Snow = {
+        Name = "Snow",
+        Icon = "❄️",
+        Rarity = 50
+    }
 }
 
 -- Load UI modules
-local EggSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/EggSelection.lua"))()
-local FruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/FruitSelection.lua"))()
-local FeedFruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/FeedFruitSelection.lua"))()
-local AutoFeedSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/AutoFeedSystem.lua"))()
+local EggSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/pikazazz/build-a-zoo/refs/heads/main/EggSelection.lua"))()
+local FruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/pikazazz/build-a-zoo/refs/heads/main/FruitSelection.lua"))()
+local FeedFruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/pikazazz/build-a-zoo/refs/heads/main/FeedFruitSelection.lua"))()
+local AutoFeedSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/pikazazz/build-a-zoo/refs/heads/main/AutoFeedSystem.lua"))()
 -- FruitStoreSystem functions are now implemented locally in the auto buy fruit section
 local AutoQuestSystem = nil
 
@@ -1898,7 +2157,7 @@ local placeEggDropdown = Tabs.PlaceTab:Dropdown({
 local placeMutationDropdown = Tabs.PlaceTab:Dropdown({
     Title = "🧬 Pick Mutations",
     Desc = "Choose which mutations to place (leave empty for all mutations)",
-    Values = {"Golden", "Diamond", "Electric", "Fire", "Jurassic"},
+    Values = {"Golden", "Diamond", "Electric", "Fire", "Jurassic", "Snow"},
     Value = {},
     Multi = true,
     AllowNone = true,
@@ -3131,7 +3390,7 @@ Tabs.ShopTab:Button({
 
 -- ============ Fruit Market (Auto Buy Fruit) ============
 -- Load Fruit Selection UI
-local FruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/FruitSelection.lua"))()
+local FruitSelection = loadstring(game:HttpGet("https://raw.githubusercontent.com/pikazazz/build-a-zoo/refs/heads/main/FruitSelection.lua"))()
 
 -- Fruit Data for auto buy functionality
 local FruitData = {
@@ -3774,7 +4033,7 @@ task.spawn(function()
         -- Fallback: try from same directory
         if not autoQuestModule then
             local success, result = pcall(function()
-                return loadstring(game:HttpGet("https://raw.githubusercontent.com/m0rgause/build-a-zoo/refs/heads/main/AutoQuestSystem.lua"))()
+                return loadstring(game:HttpGet("https://raw.githubusercontent.com/pikazazz/build-a-zoo/refs/heads/main/AutoQuestSystem.lua"))()
             end)
             if success then
                 autoQuestModule = result
@@ -3917,6 +4176,8 @@ task.spawn(function()
         end)
     end
 end)
+
+
 
 -- Safe window close handler
 local ok, err = pcall(function()
