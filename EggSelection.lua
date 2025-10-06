@@ -113,6 +113,11 @@ local EggData = {
         Price = "999,999,999,999",
         Icon = "rbxassetid://113910587565739",
         Rarity = 6
+    },
+    Snow = {
+        Name = "Snow",
+        Icon = "❄️",
+        Rarity = 50
     }
 }
 
