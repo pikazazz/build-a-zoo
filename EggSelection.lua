@@ -150,7 +150,12 @@ local MutationData = {
     Snow = {
         Name = "Snow",
         Icon = "❄️",
-        Rarity = 50
+        Rarity = 100
+    },
+    Halloween = {
+        Name = "Halloween",
+        Icon = "🎃",
+        Rarity = 100
     }
 }
 
