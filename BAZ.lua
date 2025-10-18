@@ -1,51 +1,3 @@
--- ===================================================
---      ระบบยืนยันตัวตนเบื้องต้น (Static UserID Auth)
--- ===================================================
-
--- -- [[ การตั้งค่า ]] --
--- V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V V
-
--- ใส่ Roblox UserID ของผู้ที่ได้รับอนุญาตให้ใช้สคริปต์ในนี้
--- วิธีหา UserID: ไปที่หน้าโปรไฟล์ Roblox ของคุณ, ดูที่ URL จะมีตัวเลขอยู่ชุดหนึ่ง นั่นคือ UserID ของคุณ
-local allowedUserIDs = {
-    9619454346,   -- <<! แก้ไขเป็น UserID ของคุณ
-}
-
-
-
-
--- -- [[ ระบบตรวจสอบ (ห้ามแก้ไข) ]] --
-local LocalPlayer = game:GetService("Players").LocalPlayer
-local isAuthorized = false
-
-for _, id in ipairs(allowedUserIDs) do
-    if LocalPlayer.UserId == id then
-        isAuthorized = true
-        break
-    end
-end
-
-if not isAuthorized then
-    -- ถ้า UserID ของผู้เล่นไม่ตรงกับในลิสต์
-    -- จะแสดงข้อความใน Console และหยุดการทำงานของสคริปต์ทั้งหมดทันที
-    warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    warn("!!!      AUTHENTICATION FAILED            !!!")
-    warn("!!! UserID ของคุณไม่ได้รับอนุญาตให้ใช้งานสคริปต์นี้ !!!")
-    warn("!!! UserID ของคุณคือ: " .. LocalPlayer.UserId .. " !!!")
-    warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    return -- <--- คำสั่งสำคัญในการหยุดสคริปต์
-else
-    -- ถ้า UserID ตรงกัน จะแสดงข้อความต้อนรับและทำงานต่อ
-    print("---------------------------------------------")
-    print("---      Authentication Successful        ---")
-    print("---      Welcome, " .. LocalPlayer.Name)
-    print("---------------------------------------------")
-end
--- ===================================================
---      (โค้ดสคริปต์เดิมของคุณทั้งหมดจะอยู่ต่อจากนี้)
--- ===================================================
-
-
 -- Load WindUI library (same as in Windui.lua)
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
@@ -528,7 +480,7 @@ local function getIslandBelts(islandName)
     if not conveyorRoot then return {} end
     local belts = {}
     -- Strictly look for Conveyor1..Conveyor9 in order
-    for i = 1, 9 do
+    for i = 1, 10 do
         local c = conveyorRoot:FindFirstChild("Conveyor" .. i)
         if c then
             local b = c:FindFirstChild("Belt")
@@ -1106,23 +1058,36 @@ local function listAvailableEggUIDs()
     if not eg then return uids end
     for _, child in ipairs(eg:GetChildren()) do
         if #child:GetChildren() == 0 then -- no subfolder => available
+            local uid = child.Name
             -- Get the actual egg type from T attribute
-            local eggType = child:GetAttribute("T")
-            if eggType then
-                -- Get the mutation from M attribute
-                local mutation = getEggMutation(child.Name)
-                table.insert(uids, { 
-                    uid = child.Name, 
-                    type = eggType,
-                    mutation = mutation
-                })
-            else
-                table.insert(uids, { 
-                    uid = child.Name, 
-                    type = child.Name,
-                    mutation = nil
-                })
-            end
+            local eggType = child:GetAttribute("T") or uid
+
+            -- Get the mutation from M attribute
+            local mutation = getEggMutation(uid) or "None"
+            
+            -- **(ใหม่) ดึงค่า Rarity (R)**
+            local rarity = child:GetAttribute("R") or "Unknown"
+
+            -- **(ใหม่) ดึงค่า Price**
+            local price = getEggPriceByType(eggType)
+            if price == nil then price = "N/A" end
+
+            table.insert(uids, { 
+                uid = uid, 
+                type = eggType, 
+                mutation = mutation,
+                rarity = rarity, -- เพิ่ม Rarity
+                price = price    -- เพิ่ม Price
+            })
+        else
+            -- กรณีที่ยังไม่มี attribute T/R/M (สำรอง)
+            table.insert(uids, { 
+                uid = child.Name, 
+                type = child.Name, 
+                mutation = nil,
+                rarity = nil,
+                price = "N/A"
+            })
         end
     end
     return uids
@@ -1270,6 +1235,20 @@ local eggLogParagraph = Tabs.DebugTab:Paragraph({
     ImageSize = 20
 })
 
+local inventoryEggLogParagraph = Tabs.DebugTab:Paragraph({
+    Title = "📦 ไข่ในตัว (Inventory Eggs)",
+    Desc = "ปิดใช้งานอยู่...",
+    Image = "box",
+    ImageSize = 20
+})
+
+local incubatingEggLogParagraph = Tabs.DebugTab:Paragraph({
+    Title = "🥚 ไข่ที่กำลังฟัก (Incubating Eggs)",
+    Desc = "ปิดใช้งานอยู่...",
+    Image = "clock",
+    ImageSize = 20
+})
+
 -- ฟังก์ชันสำหรับอัปเดตข้อมูลใน UI (ฉบับแก้ไข)
 -- ฟังก์ชันสำหรับอัปเดตข้อมูลใน UI (ฉบับแก้ไขพร้อม Debug)
 local function runDebugLog()
@@ -1302,13 +1281,15 @@ local function runDebugLog()
 
             table.insert(playerInfoData, string.format("ไข่ในตัว: %d ฟอง", #listAvailableEggUIDs()))
             
-            -- ตรวจสอบก่อนว่า UI Element พร้อมใช้งานหรือไม่
-            if playerLogParagraph and playerLogParagraph.SetDesc then
-                playerLogParagraph:SetDesc(table.concat(playerInfoData, "\n"))
-                print("[Debug Log] อัปเดตข้อมูลผู้เล่นบน UI สำเร็จ")
-            else
-                print("[Debug Log] Error: UI 'playerLogParagraph' ไม่พร้อมใช้งาน!")
-            end
+             -- ตรวจสอบก่อนว่า UI Element พร้อมใช้งานหรือไม่ 
+            if playerLogParagraph and playerLogParagraph.SetDesc then 
+                playerLogParagraph:SetDesc(table.concat(playerInfoData, "\n")) 
+                print("[Debug Log] อัปเดตข้อมูลผู้เล่นบน UI สำเร็จ") 
+            else 
+                print("[Debug Log] Error: UI 'playerLogParagraph' ไม่พร้อมใช้งาน!") 
+            end 
+
+            
 
             -- --- ส่วนที่ 2: อัปเดตข้อมูลไข่บนสายพาน ---
             print("[Debug Log] กำลังรวบรวมข้อมูลไข่...")
@@ -1345,6 +1326,37 @@ local function runDebugLog()
                 print("[Debug Log] อัปเดตข้อมูลไข่บน UI สำเร็จ")
             else
                  print("[Debug Log] Error: UI 'eggLogParagraph' ไม่พร้อมใช้งาน!")
+            end
+
+
+            -- --- ส่วนที่ 3: อัปเดตข้อมูลไข่ในตัว (Inventory Eggs) --- 
+            print("[Debug Log] กำลังรวบรวมข้อมูลไข่ในตัว...")
+            local availableEggs = listAvailableEggUIDs() -- ใช้ฟังก์ชันที่แก้ไขแล้ว
+
+            local inventoryEggsData = {}
+            if #availableEggs > 0 then
+                table.insert(inventoryEggsData, "UID | Type | Mutation | Rarity | Price")
+                table.insert(inventoryEggsData, "--------------------------------------")
+                for _, egg in ipairs(availableEggs) do
+                    local line = string.format("%s | %s | %s | %s | %s",
+                        egg.uid:sub(1, 5) .. "...", -- ตัด UID ให้สั้นลงเพื่อความสวยงาม
+                        tostring(egg.type),
+                        tostring(egg.mutation),
+                        tostring(egg.rarity),
+                        tostring(egg.price)
+                    )
+                    table.insert(inventoryEggsData, line)
+                end
+                print("[Debug Log] พบไข่ในตัว: " .. #availableEggs .. " ฟอง")
+            else
+                table.insert(inventoryEggsData, "ไม่พบไข่ในตัว...")
+            end
+            
+            if inventoryEggLogParagraph and inventoryEggLogParagraph.SetDesc then
+                inventoryEggLogParagraph:SetDesc(table.concat(inventoryEggsData, "\n"))
+                print("[Debug Log] อัปเดตข้อมูลไข่ในตัวบน UI สำเร็จ")
+            else
+                print("[Debug Log] Error: UI 'inventoryEggLogParagraph' ไม่พร้อมใช้งาน!")
             end
         end)
 
@@ -1757,7 +1769,7 @@ local EggData = {
     DinoEgg = { Name = "Dino Egg", Price = "10,000,000,000", Icon = "rbxassetid://80783528632315", Rarity = 6 },
     FlyEgg = { Name = "Fly Egg", Price = "999,999,999,999", Icon = "rbxassetid://109240587278187", Rarity = 6 },
     UnicornEgg = { Name = "Unicorn Egg", Price = "40,000,000,000", Icon = "rbxassetid://123427249205445", Rarity = 6 },
-    
+    GodzillaEgg = { Name = "Godzilla Egg", Price = "999,999,999,999", Icon = "rbxassetid://113910587565739", Rarity = 6 },
     AncientEgg = { Name = "Ancient Egg", Price = "999,999,999,999", Icon = "rbxassetid://113910587565739", Rarity = 6 }
 }
 
@@ -1770,7 +1782,12 @@ local MutationData = {
     Snow = {
         Name = "Snow",
         Icon = "❄️",
-        Rarity = 50
+        Rarity = 100
+    },
+    Halloween = {
+        Name = "Halloween",
+        Icon = "🎃",
+        Rarity = 100
     }
 }
 
@@ -2144,7 +2161,7 @@ end
 local placeEggDropdown = Tabs.PlaceTab:Dropdown({
     Title = "🥚 Pick Pet Types",
     Desc = "Choose which pets to place",
-    Values = {"BasicEgg", "RareEgg", "SuperRareEgg", "EpicEgg", "LegendEgg", "PrismaticEgg", "HyperEgg", "VoidEgg", "BowserEgg", "DemonEgg", "CornEgg", "BoneDragonEgg", "UltraEgg", "DinoEgg", "FlyEgg", "UnicornEgg", "AncientEgg"},
+    Values = {"BasicEgg", "RareEgg", "SuperRareEgg", "EpicEgg", "LegendEgg", "PrismaticEgg", "HyperEgg", "VoidEgg", "BowserEgg", "DemonEgg", "CornEgg", "BoneDragonEgg", "UltraEgg", "DinoEgg", "FlyEgg", "UnicornEgg","GodzillaEgg", "AncientEgg"},
     Value = {},
     Multi = true,
     AllowNone = true,
@@ -2157,7 +2174,7 @@ local placeEggDropdown = Tabs.PlaceTab:Dropdown({
 local placeMutationDropdown = Tabs.PlaceTab:Dropdown({
     Title = "🧬 Pick Mutations",
     Desc = "Choose which mutations to place (leave empty for all mutations)",
-    Values = {"Golden", "Diamond", "Electric", "Fire", "Jurassic", "Snow"},
+    Values = {"Golden", "Diamond", "Electric", "Fire", "Jurassic", "Snow","Halloween"},
     Value = {},
     Multi = true,
     AllowNone = true,
